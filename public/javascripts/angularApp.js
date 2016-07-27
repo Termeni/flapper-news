@@ -8,7 +8,12 @@ app.config([
 		.state('home', {
 			url: '/home',
 			templateUrl: '/home.html',
-			controller: 'MainCtrl'
+			controller: 'MainCtrl',
+			resolve: {
+    			postPromise: ['posts', function(posts){
+      				return posts.getAll();
+    			}]
+  			}
 		})
 		.state('posts', {
 			url: '/posts/{id}',
@@ -26,15 +31,10 @@ app.controller('MainCtrl', [
 		$scope.posts = posts.posts;
 		$scope.addPost = function(){
 			if(!$scope.title || $scope.title === '') { return; }
-			$scope.posts.push({
-				title: $scope.title, 
-				link: $scope.link,
-				upvotes: 0,
-				comments: [
-					{author: 'Joe', body: 'Cool post!', upvotes: 0},
-					{author: 'Bob', body: 'Great idea but everything is wrong!', upvotes: 0}
-				]
-				});
+			posts.create({
+				title: $scope.title,
+				link: $scope.link
+			});
 			$scope.title = '';
 			$scope.link = '';
 		};
@@ -65,9 +65,19 @@ app.controller('PostsCtrl', [
 	}
 ]);
 
-app.factory('posts', [function(){
+app.factory('posts', ['$http',function($http){
 	var o = {
 		posts: []
+	};
+	o.getAll = function() {
+    	return $http.get('/posts').success(function(data){
+      		angular.copy(data, o.posts);
+    	});
+  	};
+  	o.create = function(post) {
+  		return $http.post('/posts', post).success(function(data){
+    		o.posts.push(data);
+  		});
 	};
 	return o;
 }]);
